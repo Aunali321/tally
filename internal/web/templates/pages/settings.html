@@ -1,0 +1,187 @@
+{{define "content"}}<main class="settings" hx-boost:inherited="true" hx-target:inherited="body" hx-select:inherited="body" hx-swap:inherited="outerMorph">
+  {{with .Nuvio}}{{if .Status.SessionExpired}}<div class="banner banner--danger" role="alert">{{template "icon" "alert"}}<p class="banner__text"><strong>Nuvio sign-in expired.</strong> {{with .Status.SyncedAt}}{{if not .IsZero}}No new plays since {{when .}}.{{end}}{{end}} Reconnect to pick up where it stopped.</p><a class="button button--primary button--small" href="#nuvio-password">Reconnect</a></div>{{end}}{{end}}
+  <h1 class="text-heading-serif">Settings</h1>
+  <nav class="subnav" aria-label="Settings sections" hx-boost="false">
+    <a class="subnav__link" href="#connections">Connections{{with .Nuvio}}{{if or .Status.SessionExpired .Status.Error}}<span class="subnav__dot" aria-label="needs attention"></span>{{end}}{{end}}</a>
+    <a class="subnav__link" href="#imports">Imports</a>
+    <a class="subnav__link" href="#devices">Devices</a>
+    <a class="subnav__link" href="#account">Account</a>
+  </nav>
+  <div class="settings__content">
+
+    <section class="settings__section" id="connections" aria-labelledby="connections-h">
+      <div class="settings__head"><h2 id="connections-h" class="text-title-serif">Connections</h2><p class="text-small">Where new plays come from. tally checks for them on its own.</p></div>
+      {{template "nuvio" .}}
+    </section>
+
+    <section class="settings__section" id="imports" aria-labelledby="imports-h">
+      <div class="settings__head"><h2 id="imports-h" class="text-title-serif">Imports</h2><p class="text-small">Bring over history from another tracker. Plays tally already has are not added again, so running an import twice is safe.</p></div>
+      <div class="sources">{{range .Sources}}{{template "source" .}}{{end}}</div>
+    </section>
+
+    <section class="settings__section" id="devices" aria-labelledby="devices-h">
+      <div class="settings__head"><h2 id="devices-h" class="text-title-serif">Devices</h2><p class="text-small">TVs, apps and browsers signed in to your account.</p></div>
+      <form class="panel" method="post" action="/settings/devices/link" aria-labelledby="link-h">
+        <div class="settings__head"><h3 id="link-h" class="text-heading">Link a TV</h3><p class="text-small">Open tally on the TV and enter the 8 character code it shows.</p></div>
+        {{with .Link.Error}}<p class="form-field__error" role="alert">{{.}}</p>{{end}}{{with .Link.Done}}<p class="notice notice--ok" role="status">{{.}}</p>{{end}}
+        <div class="link-tv">
+          <input class="code{{if .Link.Error}} code--error{{end}}" name="code" aria-labelledby="link-h" placeholder="ABCD-EFGH" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" required>
+          <button class="button button--primary">Link TV</button>
+        </div>
+      </form>
+      <div class="panel panel--flush">
+        <ul class="sessions">
+          {{range .Sessions}}<li class="panel__row">
+            <span class="sessions__name">{{.Name}}</span>{{if .Current}}<span class="badge badge--watched">This browser</span>{{end}}
+            <span class="sessions__when">{{session .Session}}</span>
+            {{if not .Current}}<form method="post" action="/settings/devices/{{.ID}}/signout"><button class="button button--ghost button--small" aria-label="Sign out {{.Name}}">Sign out</button></form>{{end}}
+          </li>{{end}}
+          <li class="panel__row sessions__all"><p class="text-small muted">Signs out every TV, app and browser, including this one.</p><form method="post" action="/settings/devices/signout" hx-confirm="Sign out all {{len .Sessions}} devices?"><button class="button button--danger">Sign out everywhere</button></form></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="settings__section" id="account" aria-labelledby="account-h">
+      <div class="settings__head"><h2 id="account-h" class="text-title-serif">Account</h2><p class="text-small">Signed in as {{.User}}.</p></div>
+      <div class="panel" id="invites" aria-labelledby="invites-h">
+        <div class="settings__head"><h3 id="invites-h" class="text-heading">Invite someone</h3><p class="text-small">Sign-up needs an invite. Each link works once and expires in {{inviteDays}} days.</p></div>
+        {{with .NewInvite}}<div class="invite" role="status">
+          <label class="form-field__label" for="invite-link">Send this link</label>
+          <div class="invite__row"><div class="field"><input class="field__input" id="invite-link" value="{{.}}" readonly hx-on:focus="this.select()"></div><button class="button" type="button" hx-on:click="navigator.clipboard.writeText(document.getElementById('invite-link').value); this.textContent = 'Copied'">Copy</button></div>
+          <p class="form-field__hint">It is shown only now. Create another if it gets lost.</p>
+        </div>{{end}}
+        {{with .Invites}}<ul class="invites">{{range .}}<li><span class="text-small">Created {{when .CreatedAt}}, expires {{shortDate .ExpiresAt}}</span><form method="post" action="/settings/invites/{{.ID}}/revoke"><button class="button button--ghost button--small button--danger">Revoke</button></form></li>{{end}}</ul>{{end}}
+        <form method="post" action="/settings/invites"><button class="button">Create invite link</button></form>
+      </div>
+      <form class="panel password" method="post" action="/settings/password" aria-labelledby="password-h">
+        <h3 id="password-h" class="text-heading">Change password</h3>
+        {{with .Password.Error}}<p class="form-field__error" role="alert">{{.}}</p>{{end}}{{with .Password.Done}}<p class="notice notice--ok" role="status">{{.}}</p>{{end}}
+        <div class="form-field"><label class="form-field__label" for="password-current">Current password</label><div class="field"><input class="field__input" id="password-current" name="current" type="password" autocomplete="current-password" required></div></div>
+        <div class="form-field"><label class="form-field__label" for="password-new">New password</label><div class="field"><input class="field__input" id="password-new" name="new" type="password" autocomplete="new-password" minlength="{{.MinPassword}}" required aria-describedby="password-new-hint"></div><p class="form-field__hint" id="password-new-hint">At least {{.MinPassword}} characters. Other devices stay signed in.</p></div>
+        <div class="form-field"><label class="form-field__label" for="password-repeat">Repeat new password</label><div class="field"><input class="field__input" id="password-repeat" name="repeat" type="password" autocomplete="new-password" minlength="{{.MinPassword}}" required></div></div>
+        <button class="button button--primary">Change password</button>
+      </form>
+      <div class="panel delete" id="delete" aria-labelledby="delete-h">
+        <div class="settings__head"><h3 id="delete-h" class="text-heading">Delete your data</h3><p class="text-small">Neither can be undone.</p></div>
+        <form class="delete__row" method="post" action="/settings/history/delete" hx-confirm="Delete all of your history? This cannot be undone.">
+          <div class="delete__text"><p class="text-label">Delete history</p><p class="text-small muted">Removes your plays, progress, ratings, lists and imports. Nuvio is disconnected so nothing syncs back until you connect it again. Your account stays.</p></div>
+          {{with .Erase.Error}}<p class="form-field__error" role="alert">{{.}}</p>{{end}}{{with .Erase.Done}}<p class="notice notice--ok" role="status">{{.}}</p>{{end}}
+          <div class="delete__confirm"><div class="field"><label class="visually-hidden" for="erase-password">Your password</label><input class="field__input" id="erase-password" name="password" type="password" placeholder="Your password" autocomplete="current-password" required></div><button class="button button--danger">Delete history</button></div>
+        </form>
+        <form class="delete__row" method="post" action="/settings/account/delete" hx-confirm="Delete your account and everything in it? This cannot be undone.">
+          <div class="delete__text"><p class="text-label">Delete account</p><p class="text-small muted">Removes your account and everything in it, and signs out every device.</p></div>
+          {{with .Remove.Error}}<p class="form-field__error" role="alert">{{.}}</p>{{end}}
+          <div class="delete__confirm"><div class="field"><label class="visually-hidden" for="remove-password">Your password</label><input class="field__input" id="remove-password" name="password" type="password" placeholder="Your password" autocomplete="current-password" required></div><button class="button button--danger">Delete account</button></div>
+        </form>
+      </div>
+    </section>
+  </div>
+</main>{{end}}
+
+{{define "nuvio"}}{{$f := .NuvioForm}}{{$profiles := .Profiles}}{{with .Nuvio}}
+<div class="panel{{if .Status.SessionExpired}} panel--danger{{end}}" id="nuvio" aria-labelledby="nuvio-h"{{if and .Profile .Status.SyncedAt.IsZero (not .Status.Error)}} hx-get="/settings" hx-trigger="every 2s" hx-target="body" hx-select="body" hx-swap="outerMorph"{{end}}>
+  <div class="settings__row"><h3 id="nuvio-h" class="text-heading">Nuvio</h3>{{template "nuvio-state" .}}</div>
+  {{if .Status.SessionExpired}}
+  {{template "nuvio-facts" .}}
+  <form class="settings__stack" method="post" action="/settings/nuvio">
+    {{with $f.Backend}}<input type="hidden" name="backend" value="{{.}}">{{end}}
+    {{with $f.Error}}<p class="form-field__error" role="alert">{{.}}</p>{{end}}
+    <div class="nuvio-form nuvio-form--pair">
+      <div class="form-field"><label class="form-field__label" for="nuvio-email">Email</label><div class="field"><input class="field__input" id="nuvio-email" name="email" type="email" value="{{.Email}}" autocomplete="email" required></div></div>
+      <div class="form-field"><label class="form-field__label" for="nuvio-password">Nuvio password</label><div class="field"><input class="field__input" id="nuvio-password" name="password" type="password" autocomplete="off" required aria-describedby="nuvio-password-hint"></div><p class="form-field__hint" id="nuvio-password-hint">Used once for a new token, not stored.</p></div>
+    </div>
+    <div class="settings__actions"><button class="button button--primary">Reconnect</button></div>
+  </form>
+  {{else if not .Profile}}
+  <p class="text-small settings__lede">Signed in as {{.Email}}. Pick the profile tally should mirror.</p>
+  {{template "profile-picker" (picker $profiles .Profile $f.ProfileError)}}
+  {{else}}
+  {{template "nuvio-facts" .}}
+  {{with .Status.Error}}<p class="form-field__error" role="alert">The last sync failed: {{.}}. tally tries again {{syncEvery}}.</p>{{end}}
+  {{if $profiles}}{{template "profile-picker" (picker $profiles .Profile $f.ProfileError)}}{{end}}
+  <div class="settings__row">
+    <p class="text-small muted settings__grow">Plays, progress and your library sync {{syncEvery}}.</p>
+    <div class="settings__actions">
+      <form method="post" action="/settings/nuvio/sync"><button class="button">Sync now</button></form>
+      {{if not $profiles}}<a class="button button--ghost" href="/settings?profiles">Change profile</a>{{end}}
+    </div>
+  </div>
+  {{end}}
+  <form method="post" action="/settings/nuvio/disconnect" hx-confirm="Disconnect Nuvio? Your history stays in tally."><button class="button button--ghost button--danger button--small">Disconnect</button></form>
+</div>
+{{else}}
+<form class="panel" id="nuvio" method="post" action="/settings/nuvio" aria-labelledby="nuvio-h">
+  <div class="settings__row"><h3 id="nuvio-h" class="text-heading">Nuvio</h3><span class="chip chip--idle"><span class="chip__dot" aria-hidden="true"></span>Not connected</span></div>
+  <p class="text-small settings__lede">Sign in once. tally gets a token from Nuvio and mirrors the plays, progress and library of the profile you pick next.</p>
+  {{with $f.Error}}<p class="form-field__error" role="alert">{{.}}</p>{{end}}
+  <div class="nuvio-form">
+    <div class="form-field"><label class="form-field__label" for="nuvio-email">Email</label><div class="field"><input class="field__input" id="nuvio-email" name="email" type="email" value="{{$f.Email}}" autocomplete="email" required></div></div>
+    <div class="form-field"><label class="form-field__label" for="nuvio-password">Password</label><div class="field"><input class="field__input" id="nuvio-password" name="password" type="password" autocomplete="off" required aria-describedby="nuvio-password-hint"></div><p class="form-field__hint" id="nuvio-password-hint">Used once to get the token. tally does not store your password.</p></div>
+    <details class="disclosure disclosure--quiet"{{if or $f.Backend $f.BackendError}} open{{end}}>
+      <summary class="disclosure__summary">Advanced</summary>
+      <div class="disclosure__body"><div class="form-field{{if $f.BackendError}} form-field--error{{end}}"><label class="form-field__label" for="nuvio-backend">Backend URL <span>(optional)</span></label><div class="field{{if $f.BackendError}} field--error{{end}}"><input class="field__input" id="nuvio-backend" name="backend" type="url" value="{{$f.Backend}}" placeholder="https://nuvio.example.org" aria-describedby="nuvio-backend-hint"></div>{{with $f.BackendError}}<p class="form-field__error" id="nuvio-backend-hint">{{.}}</p>{{else}}<p class="form-field__hint" id="nuvio-backend-hint">Only if you run your own Nuvio backend. Leave empty to use the standard one.</p>{{end}}</div></div>
+    </details>
+    <button class="button button--primary nuvio-form__submit">Sign in to Nuvio</button>
+  </div>
+</form>
+{{end}}{{end}}
+
+{{define "nuvio-state"}}{{if .Status.SessionExpired}}<span class="chip chip--error"><span class="chip__dot" aria-hidden="true"></span>Sign-in expired</span>{{else if not .Profile}}<span class="chip chip--idle"><span class="chip__dot" aria-hidden="true"></span>Pick a profile</span>{{else if .Status.Error}}<span class="chip chip--error"><span class="chip__dot" aria-hidden="true"></span>Sync failed</span>{{else if .Status.SyncedAt.IsZero}}<span class="chip chip--syncing"><span class="chip__dot" aria-hidden="true"></span>Syncing</span>{{else}}<span class="chip"><span class="chip__dot" aria-hidden="true"></span>Connected</span>{{end}}{{end}}
+
+{{define "nuvio-facts"}}<dl class="facts">
+  <div><dt>Profile</dt><dd>{{.ProfileName}}</dd></div>
+  <div><dt>Account</dt><dd>{{.Email}}</dd></div>
+  <div><dt>Last sync</dt><dd{{if .Status.SessionExpired}} class="facts__late"{{end}}>{{if .Status.SyncedAt.IsZero}}Not yet{{else}}<time datetime="{{iso .Status.SyncedAt}}">{{when .Status.SyncedAt}}</time>{{end}}</dd></div>
+  <div><dt>Events imported</dt><dd>{{number .EventsApplied}}</dd></div>
+</dl>{{end}}
+
+{{define "profile-picker"}}<form class="settings__stack" method="post" action="/settings/nuvio/profile">
+  {{with .Error}}<p class="form-field__error" role="alert">{{.}}</p>{{end}}
+  {{with .Profiles}}<fieldset class="profiles">
+    <legend class="form-field__label">Profile to mirror</legend>
+    {{range .}}<label class="profiles__option"><input type="radio" name="profile" value="{{.Index}}" required{{if eq .Index $.Current}} checked{{end}}><span class="profiles__avatar" aria-hidden="true">{{initial .Name}}</span><span class="profiles__name">{{.Name}}</span></label>{{end}}
+  </fieldset>
+  <div class="settings__actions"><button class="button button--primary">{{if $.Current}}Switch profile{{else}}Mirror this profile{{end}}</button>{{if $.Current}}<a class="button button--ghost" href="/settings">Cancel</a>{{end}}</div>
+  {{if $.Current}}<p class="form-field__hint">Switching pulls the other profile's history. What is already in tally stays.</p>{{end}}{{end}}
+</form>{{end}}
+
+{{define "source"}}<article class="source" id="{{.Key}}" aria-labelledby="{{.Key}}-name">
+  <div><h3 class="source__name" id="{{.Key}}-name">{{.Name}}</h3><p class="source__desc">{{.Desc}}</p></div>
+  {{with .Run}}{{if .Running}}
+  <div class="source__body" role="status" hx-get="/settings/imports/{{$.Key}}" hx-trigger="every 2s" hx-target="closest .source" hx-select=".source" hx-swap="outerHTML">
+    <p class="source__status"><span class="button__spinner" aria-hidden="true"></span><strong>{{with .Section}}Importing {{.}}{{else}}Starting{{end}}</strong><span>{{.Label}}</span></p>
+    {{template "import-sections" .}}
+    <p class="source__note">This runs on the server, so you can leave the page.</p>
+  </div>
+  {{else}}
+  <div class="source__body">
+    {{if .Error}}<p class="form-field__error" role="alert">{{.Error}}</p>{{else}}<p class="source__status">{{template "icon" "check"}}<strong>Imported {{when .FinishedAt}}</strong><span>{{.Label}}</span></p>{{end}}
+    {{template "import-sections" .}}
+    {{if .Sections}}<p class="source__note">Without id: no IMDb or TMDB id, so tally cannot tell what they are. Skipped: entries tally cannot store, such as seasons or unknown types.</p>{{end}}
+    <details class="disclosure disclosure--quiet"{{if $.Error}} open{{end}}><summary class="disclosure__summary">Import again</summary><div class="disclosure__body">{{template "source-form" $}}</div></details>
+  </div>
+  {{end}}{{else}}
+  <div class="source__body">{{template "source-form" .}}</div>
+  {{end}}
+</article>{{end}}
+
+{{define "import-sections"}}{{with .Sections}}<div class="source__result"><table class="table">
+  <thead><tr><th>Section</th><th class="table__num">Imported</th><th class="table__num">Without id</th><th class="table__num">Skipped</th></tr></thead>
+  <tbody>{{range .}}<tr><td>{{.Name}}</td><td class="table__num">{{number .Imported}}</td><td class="table__num{{if not .NoID}} table__muted{{end}}">{{number .NoID}}</td><td class="table__num{{if not .Skipped}} table__muted{{end}}">{{number .Skipped}}</td></tr>{{end}}</tbody>
+</table></div>{{end}}{{end}}
+
+{{define "source-form"}}<form method="post" action="/settings/imports/{{.Key}}" hx-post="/settings/imports/{{.Key}}" hx-target="closest .source" hx-select=".source" hx-swap="outerHTML"{{if .Accept}} enctype="multipart/form-data" hx-encoding="multipart/form-data"{{end}}>
+  {{with .Error}}<p class="form-field__error" role="alert">{{.}}</p>{{end}}
+  <div class="source__form">
+    {{if .Accept}}
+    <label class="dropzone" hx-on:change="this.querySelector('strong').textContent = [...event.target.files].map(f => f.name).join(', ') || 'Choose files'">{{template "icon" "file"}}<span class="dropzone__text"><strong>Choose files</strong><span>{{.Accept}}</span></span><input type="file" name="files" accept="{{.Accept}}" multiple required></label>
+    {{else if eq .Key "stremio"}}
+    <div class="form-field"><label class="form-field__label" for="stremio-email">Stremio email</label><div class="field"><input class="field__input" id="stremio-email" name="email" type="email" autocomplete="off" required></div></div>
+    <div class="form-field"><label class="form-field__label" for="stremio-password">Password</label><div class="field"><input class="field__input" id="stremio-password" name="password" type="password" autocomplete="off" required aria-describedby="stremio-note"></div></div>
+    {{else}}
+    <div class="form-field"><label class="form-field__label" for="mdblist-key">API key</label><div class="field"><input class="field__input" id="mdblist-key" name="key" autocomplete="off" spellcheck="false" required aria-describedby="mdblist-note"></div></div>
+    {{end}}
+    <button class="button">Import</button>
+  </div>
+  {{if eq .Key "stremio"}}<p class="source__note" id="stremio-note">Used once to read your library, then forgotten. Reading which episodes you watched asks Stremio's public catalog for each show's episode list.</p>{{else if eq .Key "mdblist"}}<p class="source__note" id="mdblist-note">From your MDBList preferences. Used for this import only, not stored.</p>{{end}}
+</form>{{end}}

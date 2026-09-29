@@ -1,0 +1,41 @@
+{{define "content"}}<main class="lists-page" hx-boost:inherited="true" hx-target:inherited="body" hx-select:inherited="body" hx-swap:inherited="outerMorph">
+  <h1 class="text-heading-serif">Lists</h1>
+  {{template "notice" .}}{{with .Problem}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}
+  <nav class="lists-page__switch" aria-label="Your lists">
+    {{range .Lists}}<a class="chip" href="/lists/{{.Slug}}"{{if and $.Current (eq .Slug $.Current.Slug)}} aria-current="page" aria-pressed="true"{{end}}>{{.Name}} <span class="chip__count">{{.Count}}</span></a>{{end}}
+    <details class="new-list">
+      <summary class="chip chip--add">{{template "icon" "plus"}}New list</summary>
+      <form class="new-list__form" method="post" action="/lists"><label class="visually-hidden" for="new-list">List name</label><div class="field"><input class="field__input" id="new-list" name="name" placeholder="List name" required maxlength="256"></div><button class="button button--small">Create</button></form>
+    </details>
+  </nav>
+
+  {{with .Current}}<section aria-labelledby="list-name">
+    <div class="lists-page__head">
+      <h2 id="list-name" class="text-title-serif">{{.Name}}</h2><span class="text-small muted">{{.Count}} {{plural .Count "title" "titles"}}</span>
+      <div class="lists-page__actions">
+        <details class="rename">
+          <summary class="button button--ghost button--small">{{template "icon" "edit"}}Rename</summary>
+          <form class="new-list__form" method="post" action="/lists/{{.Slug}}/rename"><label class="visually-hidden" for="rename-list">New name</label><div class="field"><input class="field__input" id="rename-list" name="name" value="{{.Name}}" required maxlength="256"></div><button class="button button--small">Save</button></form>
+        </details>
+        <form method="post" action="/lists/{{.Slug}}/delete" hx-confirm="Delete {{.Name}}? Its {{.Count}} {{plural .Count "title stays" "titles stay"}} in your history."><button class="button button--ghost button--small button--danger">{{template "icon" "trash"}}Delete list</button></form>
+      </div>
+    </div>
+    {{with $.Entries}}<ul class="lists-page__grid">{{range .}}{{template "tile" (tile . $.Current)}}{{end}}</ul>{{else}}<p class="muted">Nothing on this list yet. Add titles from their page, with the list chips under the rating.</p>{{end}}
+  </section>{{else}}<section class="lists-page__empty">
+    <h2 class="text-title-serif">No lists yet</h2>
+    <p class="muted">Lists come over with your Nuvio library and imports, or start one with New list.</p>
+  </section>{{end}}
+
+  {{with .Removed}}<div class="snackbar" role="status" aria-live="polite">
+    <p class="snackbar__text">Removed {{title .Item}} from {{$.Current.Name}}</p>
+    <form method="post" action="/lists/{{$.Current.Slug}}/restore">{{template "item-fields" .Item}}<input type="hidden" name="added" value="{{.AddedAt}}"><button class="snackbar__action">Undo</button></form>
+    <button class="snackbar__close" type="button" aria-label="Dismiss" hx-on:click="this.closest('.snackbar').remove()">{{template "icon" "close"}}</button>
+  </div>{{end}}
+</main>{{end}}
+
+{{define "tile"}}{{$it := .Entry.Item}}<li class="tile{{if untitled $it}} tile--untitled{{end}}">
+  <div class="tile__media"><a class="tile__poster" href="{{titleURL $it}}">{{template "poster" $it}}</a>
+    <form method="post" action="/lists/{{.List.Slug}}/remove">{{template "item-fields" $it}}<button class="tile__remove" aria-label="Remove {{title $it}} from {{.List.Name}}">{{template "icon" "close"}}</button></form></div>
+  <a class="tile__title" href="{{titleURL $it}}">{{title $it}}</a>
+  <p class="tile__meta">{{with year $it}}<span>{{.}}</span>{{end}}<span>{{if eq $it.Type "show"}}Show{{else}}Movie{{end}}</span>{{if untitled $it}}{{template "imdb-link" $it}}{{end}}</p>
+</li>{{end}}

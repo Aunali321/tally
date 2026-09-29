@@ -1,0 +1,66 @@
+{{define "content"}}<main class="home" hx-boost:inherited="true">
+  <section aria-labelledby="month">
+    <div class="cal-head">
+      <h1 id="month" class="text-heading-serif">{{.Month.Label}}</h1>
+      <div class="cal-nav">
+        <a class="button button--icon button--ghost" href="/?month={{.Month.Prev}}" aria-label="Previous month">{{template "icon" "prev"}}</a>
+        {{with .Month.Next}}<a class="button button--icon button--ghost" href="/?month={{.}}" aria-label="Next month">{{template "icon" "next"}}</a>{{else}}<button class="button button--icon button--ghost" disabled aria-label="Next month">{{template "icon" "next"}}</button>{{end}}
+      </div>
+    </div>
+    <div class="sums">
+      <p><span class="text-numeral">{{number .Stats.Week}}</span>{{plural .Stats.Week "title" "titles"}} this week</p>
+      <p><span class="text-numeral">{{number .Stats.Month}}</span>this month</p>
+      <p><span class="text-numeral">{{number .Stats.Plays}}</span>{{plural .Stats.Plays "play" "plays"}} in all</p>
+    </div>
+    <div class="cal">
+      {{range weekdays}}<span class="cal__wd" aria-hidden="true">{{.}}</span>{{end}}
+      {{range .Month.Days}}{{template "cal-day" .}}{{end}}
+    </div>
+    {{if .Side.Empty}}<p class="text-small muted home__footnote">Each play lands on its day as a tally mark.</p>{{end}}
+    <nav class="week" aria-label="Last 7 days">
+      {{range .Week}}<a href="/?day={{.Date.Format "2006-01-02"}}"{{if .Today}} aria-current="date"{{end}}{{if .Selected}} class="week__selected"{{end}}><span class="wd" aria-hidden="true">{{slice (.Date.Format "Mon") 0 1}}</span><span class="n">{{.Date.Day}}</span>{{if .Tallies}}<span class="tally-row">{{template "tally" .Plays}}</span>{{else}}<span class="text-caption">{{.Plays}}</span>{{end}}<span class="visually-hidden">{{.Label}}, {{.Plays}} {{plural .Plays "play" "plays"}}</span></a>{{end}}
+    </nav>
+  </section>
+  {{template "side" .Side}}
+</main>{{end}}
+
+{{define "cal-day"}}{{if .Plays}}<a class="cal__day{{if .Out}} cal__day--out{{end}}{{if .Selected}} cal__day--selected{{end}}" href="/?day={{.Date.Format "2006-01-02"}}"{{if .Today}} aria-current="date"{{end}} aria-label="{{.Label}}, {{.Plays}} {{plural .Plays "play" "plays"}}">{{else}}<span class="cal__day{{if .Out}} cal__day--out{{end}}"{{if .Today}} aria-current="date"{{end}}>{{end}}<span class="cal__num">{{.Date.Day}}{{if .Today}}<em>Today</em>{{end}}</span>{{with .Titles}}<span class="cal__posters">{{range .}}{{template "poster" .}}{{end}}</span>{{end}}{{if .Plays}}{{if .Tallies}}<span class="tally-row">{{template "tally" .Plays}}</span>{{else}}<span class="text-label">{{.Plays}}</span>{{end}}{{end}}{{if .Plays}}</a>{{else}}</span>{{end}}{{end}}
+
+{{define "side"}}<aside class="side" id="side">
+  {{if .Empty}}{{template "first-run" .}}{{else}}
+  {{with .Resumes}}<section aria-labelledby="cw">
+    <h2 id="cw" class="text-heading">Continue watching</h2>
+    <ul class="resumes">{{range .}}{{template "resume" .}}{{end}}</ul>
+  </section>{{end}}
+  <section aria-labelledby="rw">
+    {{with .Day}}
+    <h2 id="rw" class="text-heading">{{.Label}}</h2>
+    {{with .Plays}}<ol class="day">{{range .}}{{template "entry" .}}{{end}}</ol>{{else}}<p class="muted">Nothing watched this day.</p>{{end}}
+    <p class="side__back"><a href="/">Back to recent history</a></p>
+    {{else}}
+    <h2 id="rw" class="text-heading">Recently watched</h2>
+    {{with .Recent}}{{template "history" $}}{{else}}<p class="muted">Nothing watched yet. Plays show up here as your apps sync.</p>{{end}}
+    {{end}}
+  </section>
+  {{end}}
+</aside>{{end}}
+
+{{define "history"}}{{range .Recent}}<div class="day">
+  {{with .Label}}<h3><span class="text-title-serif">{{.}}</span></h3>{{end}}
+  <ol>{{range .Plays}}{{template "entry" .}}{{end}}</ol>
+</div>{{end}}{{with .More}}<button class="button more" hx-get="{{.}}" hx-target="this" hx-swap="outerHTML">Show earlier days</button>{{end}}{{end}}
+
+{{define "first-run"}}<section class="first-run" aria-labelledby="first-run">
+  {{if .Linked}}
+  <h2 id="first-run" class="text-heading-serif">Pulling your history from Nuvio</h2>
+  <p class="muted">This takes a minute. After that, new plays arrive on their own.</p>
+  {{else}}
+  <h2 id="first-run" class="text-heading-serif">Nothing tracked yet</h2>
+  <p class="first-run__lede">tally only knows what your apps tell it. Start with one of these.</p>
+  <ul class="panel panel--flush first-run__ways">
+    <li class="panel__row"><a class="button button--primary" href="/settings">Connect Nuvio</a><p class="text-small muted">Sign in with your Nuvio account. Your history comes over, then new plays and progress sync on their own.</p></li>
+    <li class="panel__row"><a class="button" href="/settings#trakt">Import from Trakt</a><p class="text-small muted">Upload the .zip from a Trakt data export. History, ratings and lists come over once.</p></li>
+  </ul>
+  <p class="text-small muted">Coming from Simkl, IMDb, Stremio or MDBList? Those imports are in <a href="/settings#imports">Settings</a>.</p>
+  {{end}}
+</section>{{end}}

@@ -1,0 +1,23 @@
+{{define "icon"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">{{if eq . "brand"}}<path d="M5 5v14M9 5v14M13 5v14M17 5v14M3 15.5L19.5 8"/>{{else if eq . "home"}}<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/>{{else if eq . "lists"}}<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>{{else if eq . "search"}}<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>{{else if eq . "settings"}}<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>{{else if eq . "signout"}}<path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/>{{else if eq . "movie"}}<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 3v18M16 3v18M4 8h4M4 16h4M16 8h4M16 16h4"/>{{else if eq . "show"}}<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 3l4 4 4-4"/>{{else if eq . "external"}}<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>{{else if eq . "plus"}}<path d="M12 5v14M5 12h14"/>{{else if eq . "close"}}<path d="M6 6l12 12M18 6L6 18"/>{{else if eq . "alert"}}<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>{{else if eq . "check"}}<path d="M5 12.5l4.5 4.5L19 7.5"/>{{else if eq . "file"}}<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>{{else if eq . "edit"}}<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>{{else if eq . "trash"}}<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>{{else if eq . "next"}}<path d="M9 5l7 7-7 7"/>{{else if eq . "prev"}}<path d="M15 5l-7 7 7 7"/>{{end}}</svg>{{end}}
+
+{{define "poster"}}{{with poster .}}<span class="poster"><img src="{{.}}" alt="" loading="lazy" decoding="async"></span>{{else}}{{if untitled .}}<span class="poster poster--untitled"><span class="poster__glyph">{{template "icon" .Type}}</span><span class="poster__id">{{.ID}}</span></span>{{else}}<span class="poster poster--untitled"><span class="poster__title">{{title .}}</span></span>{{end}}{{end}}{{end}}
+
+{{define "tally"}}{{range tally .}}<span class="tally{{if .Five}} tally--five{{end}}" aria-hidden="true">{{range .Bars}}<i></i>{{end}}</span>{{end}}{{end}}
+
+{{define "imdb-link"}}{{with imdbURL .ID}}<a class="entry__ext" href="{{.}}" target="_blank" rel="noreferrer" hx-boost="false">{{$.ID}}{{template "icon" "external"}}<span class="visually-hidden">on IMDb</span></a>{{else}}<span>{{.ID}}</span>{{end}}{{end}}
+
+{{define "entry"}}<li class="entry{{if untitled .Item}} entry--untitled{{end}}">{{template "poster" .Item}}<div class="entry__body"><a class="entry__title" href="{{titleURL .Item}}">{{title .Item}}</a><p class="entry__meta">{{with year .Item}}<span>{{.}}</span>{{end}}{{with episode .Item}}<span class="entry__ep">{{.}}</span>{{end}}{{if untitled .Item}}{{template "imdb-link" .Item}}{{end}}{{if gt .Plays 1}}<span class="entry__plays">{{template "tally" .Plays}}Watched {{.Plays}} times</span>{{end}}</p></div><time class="entry__time" datetime="{{iso .WatchedAt}}">{{clock .WatchedAt}}</time></li>{{end}}
+
+{{define "item-fields"}}<input type="hidden" name="type" value="{{.Type}}"><input type="hidden" name="id" value="{{.ID}}">{{with .Season}}<input type="hidden" name="season" value="{{.}}"><input type="hidden" name="episode" value="{{$.Episode}}">{{end}}{{end}}
+
+{{define "resume"}}<li class="resume">{{template "poster" .Item}}<div class="resume__body">
+  <p class="resume__title"><a href="{{titleURL .Item}}">{{title .Item}}</a><span class="text-small muted">{{with episode .Item}}{{.}}{{else}}{{with year .Item}}{{.}}{{end}}{{end}}</span></p>
+  {{if untitled .Item}}<p class="resume__meta">{{template "imdb-link" .Item}}</p>{{end}}
+  <div class="resume__progress"><div class="progress" role="progressbar" aria-label="{{title .Item}} {{episode .Item}} progress" aria-valuenow="{{percent .Position .Duration}}" aria-valuemin="0" aria-valuemax="100"><span class="progress__bar" style="--value:{{percent .Position .Duration}}%"></span></div><span>{{remaining .Position .Duration}}</span></div>
+  <form class="resume__actions" method="post" action="/progress/watched">{{template "item-fields" .Item}}
+    <button class="button button--small" hx-post="/progress/watched" hx-target="body" hx-select="body" hx-swap="outerMorph">Mark watched</button>
+    <button class="button button--small button--ghost" formaction="/progress/clear" hx-post="/progress/clear" hx-target="body" hx-select="body" hx-swap="outerMorph">Clear progress</button>
+  </form>
+</div></li>{{end}}
+
+{{define "notice"}}{{with .Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}{{end}}

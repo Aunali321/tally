@@ -1,0 +1,22 @@
+{{define "content"}}<div class="auth">
+  <main class="auth__box">
+    <div class="auth__brand">{{template "icon" "brand"}}<span>tally</span></div>
+    {{if .Valid}}
+    <form class="panel form" method="post" action="/signup" aria-labelledby="signup-h">
+      <div class="auth__intro"><h1 id="signup-h" class="text-heading-serif">Create your account</h1><p class="text-small">You were invited to this tally server. Your email is how you sign in.</p></div>
+      {{with .Error}}<p class="form-field__error" role="alert">{{.}}</p>{{end}}
+      <input type="hidden" name="invite" value="{{.Invite}}">
+      <div class="form-field"><label class="form-field__label" for="signup-email">Email</label><div class="field"><input class="field__input" id="signup-email" name="email" type="email" value="{{.Email}}" autocomplete="email" required autofocus></div></div>
+      <div class="form-field"><label class="form-field__label" for="signup-password">Password</label><div class="field"><input class="field__input" id="signup-password" name="password" type="password" autocomplete="new-password" minlength="{{.MinPassword}}" required aria-describedby="signup-password-hint"></div><p class="form-field__hint" id="signup-password-hint">At least {{.MinPassword}} characters.</p></div>
+      <div class="form-field"><label class="form-field__label" for="signup-repeat">Repeat password</label><div class="field"><input class="field__input" id="signup-repeat" name="repeat" type="password" autocomplete="new-password" minlength="{{.MinPassword}}" required></div></div>
+      <button class="button button--primary">Create account</button>
+    </form>
+    {{else}}
+    <section class="panel auth__done" aria-labelledby="signup-h">
+      <h1 id="signup-h" class="text-heading-serif">This invite does not work</h1>
+      <p class="text-small">It was already used, it expired, or the link is incomplete. Ask whoever sent it for a new one.</p>
+      <div class="auth__links"><a class="button" href="/login">Sign in</a></div>
+    </section>
+    {{end}}
+  </main>
+</div>{{end}}

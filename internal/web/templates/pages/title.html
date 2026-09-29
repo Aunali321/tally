@@ -1,0 +1,98 @@
+{{define "content"}}{{$t := .Title}}{{$it := $t.Item}}{{$base := titleURL $it}}<main class="title{{if untitled $it}} title--untitled{{end}}" hx-boost:inherited="true" hx-target:inherited="body" hx-select:inherited="body" hx-swap:inherited="outerMorph">
+  {{template "notice" .}}
+  <div class="title__poster">{{template "poster" $it}}</div>
+
+  <header class="title__head">
+    <h1 class="text-display">{{title $it}}</h1>
+    <p class="title__meta">{{with year $it}}<span>{{.}}</span>{{end}}<span>{{if eq $it.Type "show"}}Show{{else}}Movie{{end}}</span>{{template "imdb-link" $it}}</p>
+    {{if untitled $it}}<p class="title__note text-small">tally only knows this {{$it.Type}}'s id. The title, year and poster fill in when an app reports them.</p>{{end}}
+  </header>
+
+  <div class="title__summary">
+    <div class="title__lede">{{with len $t.Plays}}<span class="tally-row tally--large">{{template "tally" .}}</span>{{end}}<p class="text-lede">{{.Summary}}</p></div>
+    {{if and (eq $it.Type "movie") $t.Plays}}<form method="post" action="{{$base}}/plays"><button class="button button--primary">Mark watched again</button></form>{{end}}
+  </div>
+
+  {{with $t.Progress}}<section class="panel title__progress" aria-labelledby="progress-h">
+    <h2 id="progress-h" class="text-heading">In progress</h2>
+    <ul class="title__resumes">{{range .}}<li>
+      {{with episode .Item}}<p class="text-label">{{.}}</p>{{end}}
+      <div class="resume__progress"><div class="progress" role="progressbar" aria-label="{{title .Item}} {{episode .Item}} progress" aria-valuenow="{{percent .Position .Duration}}" aria-valuemin="0" aria-valuemax="100"><span class="progress__bar" style="--value:{{percent .Position .Duration}}%"></span></div><span>{{remaining .Position .Duration}}</span></div>
+      <p class="text-small muted">Stopped {{when .UpdatedAt}}.</p>
+      <form class="resume__actions" method="post" action="{{$base}}/plays">{{with .Item.Season}}<input type="hidden" name="season" value="{{.}}">{{end}}{{with .Item.Episode}}<input type="hidden" name="episode" value="{{.}}">{{end}}
+        {{if not .Item.Season}}<button class="button button--primary">Mark watched</button>{{end}}
+        <button class="button button--ghost" formaction="{{$base}}/progress/clear">Clear progress</button>
+      </form>
+    </li>{{end}}</ul>
+  </section>{{end}}
+
+  <div class="title__body">
+    <div class="title__controls">
+      <form method="post" action="{{$base}}/rating" hx-post="{{$base}}/rating" hx-trigger="change, submit">
+        <fieldset class="rating">
+          <legend class="rating__legend">Your rating {{if $t.Rating}}<button name="rating" value="" class="button button--ghost button--small">Clear</button>{{else}}<output class="muted">Not rated</output>{{end}}</legend>
+          <div class="rating__opts">{{range seq 1 10}}<label class="rating__opt"><input type="radio" name="rating" value="{{.}}" aria-label="{{.}} out of 10"{{if eq . $t.Rating}} checked{{end}}>{{.}}</label>{{end}}</div>
+          <noscript><button class="button button--small">Save rating</button></noscript>
+        </fieldset>
+      </form>
+      <div class="lists" role="group" aria-labelledby="lists-label">
+        <p class="text-label" id="lists-label">Lists</p>
+        <div class="lists__chips">
+          {{range .Lists}}<form method="post" action="{{$base}}/lists/{{.Slug}}"><input type="hidden" name="on" value="{{.On}}"><button class="chip" aria-pressed="{{.On}}">{{.Name}}</button></form>
+          {{end}}
+          <details class="new-list">
+            <summary class="chip chip--add">{{template "icon" "plus"}}New list</summary>
+            <form class="new-list__form" method="post" action="{{$base}}/lists">
+              <label class="visually-hidden" for="new-list">List name</label>
+              <div class="field"><input class="field__input" id="new-list" name="name" placeholder="List name" required maxlength="256"></div>
+              <button class="button button--small">Add</button>
+            </form>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    {{if eq $it.Type "show"}}
+    <section class="episodes" aria-labelledby="episodes-h">
+      <div class="episodes__head">
+        <h2 id="episodes-h" class="text-heading-serif">Watched episodes</h2>
+        <p class="text-small muted">Only the episodes you played. tally has no episode list for this show.</p>
+      </div>
+      <form class="panel log" method="post" action="{{$base}}/episodes" aria-labelledby="log-h">
+        <h3 id="log-h" class="text-heading">Log an episode</h3>
+        <div class="log__fields">
+          <div class="form-field log__num"><label class="form-field__label" for="log-season">Season</label><div class="field"><input class="field__input" id="log-season" name="season" type="number" inputmode="numeric" min="0" value="{{.Log.Season}}" required></div></div>
+          <div class="form-field log__num"><label class="form-field__label" for="log-episode">Episode</label><div class="field"><input class="field__input" id="log-episode" name="episode" type="number" inputmode="numeric" min="1" value="{{.Log.Episode}}" required></div></div>
+          <div class="form-field log__date"><label class="form-field__label" for="log-date">Watched on</label><div class="field"><input class="field__input" id="log-date" name="date" type="date" value="{{.Today}}" max="{{.Today}}" required></div></div>
+          <button class="button button--primary">Log episode</button>
+        </div>
+      </form>
+      {{range .Seasons}}<details class="disclosure" open>
+        <summary class="disclosure__summary"><span class="season-sum"><span class="text-title-serif">Season {{.Number}}</span><span class="tally-row">{{template "tally" .Plays}}</span><span class="text-small muted">{{len .Episodes}} {{plural (len .Episodes) "episode" "episodes"}}, {{.Plays}} {{plural .Plays "play" "plays"}}</span></span></summary>
+        <div class="disclosure__body"><table class="table">
+          <thead><tr><th>Episode</th><th>Last watched</th><th>Plays</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+          <tbody>{{range .Episodes}}<tr>
+            <td class="episodes__ep">E{{.Item.Episode}}</td>
+            <td><time datetime="{{iso .WatchedAt}}">{{when .WatchedAt}}</time></td>
+            <td><span class="episodes__plays"><span class="tally-row">{{template "tally" .Plays}}</span>{{.Plays}}</span></td>
+            <td class="table__num"><form method="post" action="{{$base}}/unwatch"><input type="hidden" name="season" value="{{.Item.Season}}"><input type="hidden" name="episode" value="{{.Item.Episode}}"><button class="button button--ghost button--small" aria-label="Unwatch {{episode .Item}}">Unwatch</button></form></td>
+          </tr>{{end}}</tbody>
+        </table></div>
+      </details>{{end}}
+    </section>
+    {{else}}
+    <section class="plays" aria-labelledby="plays-h">
+      <h2 id="plays-h" class="text-heading">Plays</h2>
+      {{with $t.Plays}}<table class="table">
+        <thead><tr><th>Date</th><th>Time</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+        <tbody>{{range .}}<tr>
+          <td><time datetime="{{iso .WatchedAt}}">{{longDate .WatchedAt}}</time></td>
+          <td class="table__muted">{{clock .WatchedAt}}</td>
+          <td class="table__num"><form method="post" action="{{$base}}/plays/remove"><input type="hidden" name="play" value="{{.PlayID}}"><button class="button button--ghost button--small" aria-label="Remove play on {{longDate .WatchedAt}}">Remove</button></form></td>
+        </tr>{{end}}</tbody>
+      </table>{{else}}<p class="text-small muted">Not watched to the end yet.</p>{{end}}
+      {{if not $t.Plays}}{{if not $t.Progress}}<form method="post" action="{{$base}}/plays"><button class="button">Mark watched</button></form>{{end}}{{end}}
+    </section>
+    {{end}}
+  </div>
+</main>{{end}}

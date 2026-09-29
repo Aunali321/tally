@@ -1,0 +1,28 @@
+{{define "content"}}<main class="search">
+  <h1 class="text-heading-serif">Search</h1>
+  <form role="search" action="/search">
+    <label class="field field--large">{{template "icon" "search"}}<span class="visually-hidden">Search your titles</span><input class="field__input" type="search" name="q" value="{{.Query}}" placeholder="Title or IMDb id" autocomplete="off" autofocus hx-get="/search" hx-trigger="input changed delay:150ms, search" hx-target="#results" hx-select="#results" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="closest .field"><span class="field__spinner htmx-indicator" aria-hidden="true"></span><kbd class="kbd search__key">/</kbd></label>
+  </form>
+  {{if not .Query}}<div class="search__hint" id="results">
+    <p class="text-body">{{if .Tracked}}Searches the {{number .Tracked}} {{plural .Tracked "title" "titles"}} you've watched, rated or put on a list. Type part of a title, or an IMDb id like tt0944947.{{else}}Nothing tracked yet, so there is nothing to search. Titles show up here once your apps sync or you import your history.{{end}}</p>
+    <p class="search__keys text-small muted">Press <kbd class="kbd">/</kbd> on any page to jump here.</p>
+  </div>
+  {{else}}{{with .Results}}<section id="results" aria-labelledby="results-count">
+    <p id="results-count" class="text-small muted" aria-live="polite">{{len .}} {{plural (len .) "title" "titles"}}</p>
+    <ul class="results">{{range .}}{{$it := asItem .}}<li class="entry{{if untitled $it}} entry--untitled{{end}}">{{template "poster" $it}}<div class="entry__body">
+      <a class="entry__title" href="{{titleURL $it}}">{{title $it}}</a>
+      <p class="entry__meta">{{with .Year}}<span>{{.}}</span>{{end}}<span>{{if eq .Type "show"}}Show{{else}}Movie{{end}}</span>{{if untitled $it}}{{template "imdb-link" $it}}{{end}}</p>
+      <p class="results__badges">
+        {{with .Progress}}<span class="badge">In progress, {{left .}}</span>{{end}}
+        {{if .Episodes}}<span class="badge badge--watched">{{template "tally" .Episodes}}{{.Episodes}} {{plural .Episodes "episode" "episodes"}} watched</span>{{else if .Plays}}<span class="badge badge--watched">{{template "tally" .Plays}}{{if eq .Plays 1}}Watched{{else}}Watched {{.Plays}} times{{end}}</span>{{end}}
+        {{with .Rating}}<span class="badge">Rated {{.}}</span>{{end}}
+        {{range .Lists}}<span class="badge badge--outline">{{index $.ListNames .}}</span>{{end}}
+      </p>
+    </div></li>{{end}}</ul>
+  </section>{{else}}<section class="search__none" id="results" aria-live="polite">
+    <span class="tally-row" aria-hidden="true">{{template "tally" 4}}</span>
+    <h2 class="text-title-serif">Nothing you've tracked matches “{{.Query}}”</h2>
+    <p class="text-body">Search only covers titles you've watched, rated or put on a list. If a title came in without a name, try its IMDb id.</p>
+    <a class="button button--ghost button--small" href="/search">Clear search</a>
+  </section>{{end}}{{end}}
+</main>{{end}}

@@ -1,0 +1,31 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="htmx-config" content='{"noSwap":[204,304,"5xx"]}'>
+<title>{{.Title}} · tally</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/system.css">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/htmx.min.js" defer></script>
+</head>
+<body hx-on:keydown="if (event.key === '/' && !event.target.closest('input, textarea, select, [contenteditable]')) { event.preventDefault(); const q = document.querySelector('input[name=q]'); q ? q.focus() : location.assign('/search') }">
+{{if .User}}{{template "nav" .}}{{end}}
+{{template "content" .}}
+</body>
+</html>{{end}}
+
+{{define "nav"}}<nav class="nav" aria-label="Main">
+  <a class="nav__brand" href="/">{{template "icon" "brand"}}tally</a>
+  <ul class="nav__links">
+    {{range sections}}<li><a class="nav__link" href="{{.Href}}"{{if eq .Name $.Section}} aria-current="page"{{end}}>{{template "icon" .Name}}<span>{{.Label}}</span></a></li>
+    {{end}}
+  </ul>
+  <div class="nav__meta">
+    {{with .Sync}}<a class="chip chip--error" href="/settings" aria-label="{{.Label}}"><span class="chip__dot" aria-hidden="true"></span><span class="nav__user-name">{{.Label}}</span></a>{{end}}
+    <span class="nav__user"><span class="nav__avatar" aria-hidden="true">{{initial .User}}</span><span class="nav__user-name">{{.User}}</span></span>
+    <form method="post" action="/signout"><button class="button button--ghost button--small" aria-label="Sign out">{{template "icon" "signout"}}<span class="nav__user-name">Sign out</span></button></form>
+  </div>
+</nav>{{end}}

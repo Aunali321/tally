@@ -1,0 +1,14 @@
+{{define "content"}}<div class="auth">
+  <main class="auth__box">
+    <div class="auth__brand">{{template "icon" "brand"}}<span>tally</span></div>
+    <form class="panel form" method="post" action="/login" aria-labelledby="signin-h">
+      <h1 id="signin-h" class="text-heading-serif">Sign in</h1>
+      {{with .Error}}<p class="form-field__error" role="alert">{{.}}</p>{{end}}
+      <input type="hidden" name="next" value="{{.Next}}">
+      <div class="form-field"><label class="form-field__label" for="email">Email</label><div class="field"><input class="field__input" id="email" name="email" type="email" value="{{.Email}}" autocomplete="email" required autofocus></div></div>
+      <div class="form-field"><label class="form-field__label" for="password">Password</label><div class="field"><input class="field__input" id="password" name="password" type="password" autocomplete="current-password" required></div></div>
+      <button class="button button--primary">Sign in</button>
+    </form>
+    <p class="text-small muted">No account? Ask someone on this server for an invite link.</p>
+  </main>
+</div>{{end}}
